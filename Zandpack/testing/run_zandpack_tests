@@ -5,46 +5,92 @@ Created on Wed Dec 14 14:50:44 2022
 
 @author: aleksander
 
-Tool for printing and plotting information from a TD calculation.
+Runs the Zandpack test scenarios.
 
+    run_zandpack_tests Dir=/path/to/empty/dir /path/to/pseudopotentials
+
+Each registered scenario is copied into the target directory and its run.sh is
+executed there. The exit status of every scenario is collected and reported at
+the end, and this tool exits non-zero if any of them failed -- so it can be used
+as a release gate.
+
+See README.md next to this file for the layout of a scenario and for the
+prerequisites (an MPI runtime, tbtrans on PATH, pseudopotentials).
 """
 
-import sys, os
+import sys
+import os
+import subprocess
+
+# Scenarios to run, in order. See README.md for the ones that are deliberately
+# left out (they need a full SIESTA run and fixtures that are not in the repo).
+Tests = ["Croy2009",
+         "PopescuCroy2016",
+         "Honeychurch2018",
+         "scipy_ode_vs_AdaptiveRK4",
+         "restart_check",
+         ]
 
 args = sys.argv[1:]
 print('Running Zandpack tests')
 print('')
 print('sys.argv:', sys.argv)
 print('')
-orig_dir = __file__[:-19]
+
+if len(args) < 2:
+    print(__doc__)
+    sys.exit(2)
+
+orig_dir = os.path.dirname(os.path.abspath(__file__))
 
 path = args[0].replace(' ', '').split('=')[1]
 os.chdir(path)
 new_folder = os.getcwd()
 sys.path.append(new_folder)
-Tests = [#"Croy2009",
-         #"PopescuCroy2016",
-         "Honeychurch2018"
-         ]
 
+# clean.sh is the one thing allowed to be sitting in the target directory --
+# it is how you make a used directory reusable.
 _files = [f for f in os.listdir() if f != "clean.sh"]
 
-if len(_files)>0:
-    print("Your testing directory is not empty, please make an empty folder for the testing.")
-    sys.exit()
+if len(_files) > 0:
+    print("Your testing directory is not empty, please make an empty folder "
+          "for the testing.")
+    print("(If this is a directory you have used before, run clean.sh in it.)")
+    sys.exit(1)
 
-print("Copying pseudo-potentials from "+args[1])
-os.system("cp -R "+args[1] + " .")
+print("Copying pseudo-potentials from " + args[1])
+subprocess.run("cp -R " + args[1] + " .", shell=True, check=True)
+
+results = []
 for tst in Tests:
-    print("Copying test "+tst)
-    os.system("cp -R "+orig_dir + tst+" .")
+    print("")
+    print("=" * 70)
+    print("Running test " + tst)
+    print("=" * 70)
+    subprocess.run("cp -R " + os.path.join(orig_dir, tst) + " .",
+                   shell=True, check=True)
     os.chdir(tst)
-    os.system("sh run.sh")
-    os.chdir("../")
+    status = subprocess.run("sh run.sh", shell=True).returncode
+    os.chdir("..")
+    results.append((tst, status))
+    print("Test " + tst + (" PASSED" if status == 0 else
+                           " FAILED (exit %d)" % status))
 
+print("")
+print("=" * 70)
+print("Summary")
+print("=" * 70)
+width = max(len(t) for t, _ in results)
+for tst, status in results:
+    print("  %-*s  %s" % (width, tst,
+                          "PASS" if status == 0 else
+                          "FAIL (exit %d)" % status))
 
+failed = [t for t, s in results if s != 0]
+print("")
+if failed:
+    print("%d of %d scenarios failed: %s"
+          % (len(failed), len(results), ", ".join(failed)))
+    sys.exit(1)
 
-
-
-
-
+print("All %d scenarios passed." % len(results))

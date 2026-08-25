@@ -1,24 +1,37 @@
+"""Overlay the nozand/zand currents on the in-package reference results.
+
+Run through run.sh, which exports MPLBACKEND=Agg and ZANDPACK_MPL so that this
+works on a headless node: the figure is written to disk instead of opened in a
+window, which would otherwise block run_zandpack_tests forever.
+"""
 import numpy as np
-from Zandpack.plot import plt, J, DM
+from Zandpack.plot import plt, J
 
-R1 = np.load("Croy2009_Results.npz")
+REF  = "Croy2009_Results.npz"
+SAVE = "TDT_Croy2009_save"
 
-JL = R1["Jl"]
-JR = R1["Jr"]
-T  = R1["t"]
+R  = np.load(REF)
+T  = R["rk4_t"]
+JL = R["rk4_jl"]
+JR = R["rk4_jr"]
+T2 = R["scipy_t"]
+J2 = R["scipy_jl"]
 
-t2,j2 = J(["TDT_Croy2009_save_nozand"])
-plt.plot(T, JL)
-plt.plot(T, JR)
+fig, axes = plt.subplots(2, 1, sharex=True, figsize=(7, 8))
 
-plt.plot(t2, j2[0], linestyle="dashed")
-plt.plot(t2, j2[1], linestyle="dotted")
+for ax, driver in zip(axes, ["nozand", "zand"]):
+    tz, jz = J([SAVE + "_" + driver])
+    ax.plot(T, JL, label="rk4 left")
+    ax.plot(T, JR, label="rk4 right")
+    ax.plot(T2, np.asarray(J2)[:, 0], linestyle="dashdot", label="scipy left")
+    ax.plot(tz, jz[0], linestyle="dashed", label=driver + " left")
+    ax.plot(tz, jz[1], linestyle="dotted", label=driver + " right")
+    ax.set_title(driver)
+    ax.set_ylabel("Current")
+    ax.legend()
 
-plt.show()
-
-t2,j2 = J(["TDT_Croy2009_save_zand"])
-plt.plot(T, JL)
-plt.plot(T, JR)
-
-plt.plot(t2, j2[0], linestyle="dashed")
-plt.plot(t2, j2[1], linestyle="dotted")
+axes[-1].set_xlabel("Time")
+fig.tight_layout()
+fig.savefig("Croy2009_compare.svg")
+plt.close(fig)
+print("Wrote Croy2009_compare.svg")

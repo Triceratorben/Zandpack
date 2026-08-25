@@ -1,5 +1,5 @@
 Zandpack.egg-info/
 INSTALL_LOG.txt
-Zandpack/__pycache__/
+__pycache__/
 Zandpack/docs/_build/
 Zandpack/mpitest/

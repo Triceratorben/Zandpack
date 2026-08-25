@@ -8,10 +8,8 @@ from Zandpack.Pulses import box_pulse, zero_dH
 from Zandpack.TimedependentTransport import hbar as print_hbar
 from Zandpack.Pulses import air_photonics_pulse as P
 
-print('Make sure you have put hbar = 1.0 in this module\n')
-print('Yes you have to do this manually\n')
-print('Go to the location of the package -> td_constants and set hbar = 1.0 for natural units \n\n')
-print('hbar is currently set to ',print_hbar)
+# hbar comes from the ZANDPACK_HBAR environment variable, exported by run.sh.
+print('hbar is currently set to ', print_hbar)
 
 tx     = 2
 t_dev  = 2
@@ -136,7 +134,9 @@ t, d = RK4( f, sig, psi, omega, 1e-12,  -3*np.pi/(2*W)-100, 150,  dH, delta, Tes
                     name = 'QD')
 
 # In[]
-plt.show()
+# plt.show() would block under an interactive backend; run.sh sets
+# MPLBACKEND=Agg, but do not rely on that here.
+plt.close()
 Tp = np.pi*2/W
 plt.plot(t,np.array(d['current_left']), label = r'$J_l$')
 plt.ylabel('Current left')

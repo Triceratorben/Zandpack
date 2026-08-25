@@ -38,9 +38,11 @@ C.Make_Contour(line, 20 ,pole_mode = 'JieHu2011')
 C.Electrodes( semi_infs = ['-a1', '+a1'] )
 C.make_device(elec_inds = [[0],  [tx+1]] )
 
-plt.show()
+# plt.show() would block under an interactive backend; run.sh sets
+# MPLBACKEND=Agg, but do not rely on that here.
+plt.close()
 C.Device.Visualise()
-# plt.show()
+plt.close()
 # Create the electronic structures. These are sisl shorthands for creating the Hamiltonians of the leads and device
 elec = sisl.Hamiltonian(sisl.geom.sc(lat_const, sisl.Atom(1, R= 3.0)).add_vacuum(10,1).add_vacuum(10,2))
 elec.set_nsc((3,1,1))

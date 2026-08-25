@@ -1,31 +1,34 @@
+"""Overlay the nozand/zand currents on the in-package reference results.
+
+Run through run.sh, which exports MPLBACKEND=Agg and ZANDPACK_MPL so that this
+works on a headless node: the figure is written to disk instead of opened in a
+window, which would otherwise block run_zandpack_tests forever.
+"""
 import numpy as np
-from Zandpack.plot import plt, J, DM
+from Zandpack.plot import plt, J
 
-R1 = np.load("croy2016_results.npz")
+REF  = "honeychurch2018_results.npz"
+SAVE = "TDT_hc2018_save"
 
-JL = R1["rk4_jl"]
-JR = R1["rk4_jr"]
-T  = R1["rk4_t"]
-# JL2 = R1["scipy_jl"]
-# T2  = R1["scipy_t"]
+R  = np.load(REF)
+T  = R["rk4_t"]
+JL = R["rk4_jl"]
+JR = R["rk4_jr"]
 
+fig, axes = plt.subplots(2, 1, sharex=True, figsize=(7, 8))
 
-t2,j2 = J(["TDT_Croy2016_save_nozand"])
-plt.plot(T, JL, label="rk4")
-plt.plot(T, JR, label="rk4")
-#plt.plot(T2, JL2, label = 'scipy', linestyle="dashdot")
-plt.plot(t2, j2[0], linestyle="dashed", label="nozand")
-plt.plot(t2, j2[1], linestyle="dotted", label="nozand")
-plt.legend()
+for ax, driver in zip(axes, ["nozand", "zand"]):
+    tz, jz = J([SAVE + "_" + driver])
+    ax.plot(T, JL, label="rk4 left")
+    ax.plot(T, JR, label="rk4 right")
+    ax.plot(tz, jz[0], linestyle="dashed", label=driver + " left")
+    ax.plot(tz, jz[1], linestyle="dotted", label=driver + " right")
+    ax.set_title(driver)
+    ax.set_ylabel("Current")
+    ax.legend()
 
-plt.show()
-
-t2,j2 = J(["TDT_Croy2016_save_zand"])
-plt.plot(T, JL, label="RK4")
-plt.plot(T, JR, label="RK4")
-# plt.plot(T2, JL2, label = 'scipy', linestyle="dashdot")
-
-plt.plot(t2, j2[0], linestyle="dashed", label="zand")
-plt.plot(t2, j2[1], linestyle="dotted", label="zand")
-
-plt.show()
+axes[-1].set_xlabel("Time")
+fig.tight_layout()
+fig.savefig("Honeychurch2018_compare.svg")
+plt.close(fig)
+print("Wrote Honeychurch2018_compare.svg")
